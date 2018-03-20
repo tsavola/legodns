@@ -104,8 +104,11 @@ func (z *Zone) matchResource(name string) (node string, ok bool) {
 		ok = true
 
 	case strings.HasSuffix(name, "."+z.Domain):
-		node = name[:len(name)-1-len(z.Domain)]
-		ok = true
+		prefix := name[:len(name)-1-len(z.Domain)]
+		if !strings.Contains(prefix, ".") {
+			node = prefix
+			ok = true
+		}
 	}
 
 	return
