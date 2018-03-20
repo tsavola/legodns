@@ -149,14 +149,12 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 		nodes   []naming.Node
 	)
 
-	switch q.Qtype {
-	case dns.TypeAXFR: // TODO: dns.TypeIXFR?
-		hasApex = true
+	if transferReq(&q) {
 		if soa.authority() {
+			hasApex = true
 			nodes = resolver.TransferZone(strings.ToLower(q.Name))
 		}
-
-	default:
+	} else {
 		if node := resolver.ResolveResource(strings.ToLower(q.Name)); node.Name != "" {
 			hasApex = (node.Name == naming.Apex)
 			nodes = []naming.Node{node}
@@ -237,8 +235,8 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 			}
 		}
 
-		if q.Qtype == dns.TypeAXFR {
-			// AXFR is concluded with repeated SOA record
+		if transferReq(&q) {
+			// Zone transfer is concluded with repeated SOA record
 			replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
 		}
 
@@ -257,7 +255,18 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 // reply message for the given question.
 func replyType(q *dns.Question, recordType uint16) bool {
 	switch q.Qtype {
-	case dns.TypeAXFR, dns.TypeANY, recordType:
+	case dns.TypeAXFR, dns.TypeIXFR, dns.TypeANY, recordType:
+		return true
+
+	default:
+		return false
+	}
+}
+
+// transferReq returns true if question is some kind of zone transfer request.
+func transferReq(q *dns.Question) bool {
+	switch q.Qtype {
+	case dns.TypeAXFR, dns.TypeIXFR:
 		return true
 
 	default:
