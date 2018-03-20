@@ -11,12 +11,14 @@ import (
 type Records struct {
 	Addr AddrRecord
 	TXT  TextRecord
+	NS   StringRecord
 }
 
 func (rs *Records) DeepCopy() Records {
 	return Records{
 		Addr: rs.Addr.DeepCopy(),
 		TXT:  rs.TXT.DeepCopy(),
+		NS:   rs.NS.DeepCopy(),
 	}
 }
 
@@ -44,4 +46,13 @@ func (r *TextRecord) DeepCopy() TextRecord {
 		Values: append([]string(nil), r.Values...),
 		TTL:    r.TTL,
 	}
+}
+
+type StringRecord struct {
+	Value string
+	TTL   uint32
+}
+
+func (r *StringRecord) DeepCopy() StringRecord {
+	return *r
 }

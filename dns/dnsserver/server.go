@@ -198,6 +198,18 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 				}
 			}
 
+			if node.NS.Value != "" && replyType(&q, dns.TypeNS) {
+				replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
+					Hdr: dns.RR_Header{
+						Name:   name,
+						Rrtype: dns.TypeNS,
+						Class:  dns.ClassINET,
+						Ttl:    node.NS.TTL,
+					},
+					Ns: node.NS.Value,
+				})
+			}
+
 			if len(node.Addr.A) != 0 && replyType(&q, dns.TypeA) {
 				replyMsg.Answer = append(replyMsg.Answer, &dns.A{
 					Hdr: dns.RR_Header{
