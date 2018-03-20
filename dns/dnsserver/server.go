@@ -142,6 +142,8 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 		debugLog.Printf("dnsserver: %v %s %q", w.RemoteAddr(), dns.TypeToString[q.Qtype], q.Name)
 	}
 
+	replyMsg.Authoritative = soa.authority()
+
 	var (
 		hasApex bool
 		nodes   []naming.Node
@@ -150,7 +152,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 	switch q.Qtype {
 	case dns.TypeAXFR: // TODO: dns.TypeIXFR?
 		hasApex = true
-		if soa.NS != "" {
+		if soa.authority() {
 			nodes = resolver.TransferZone(strings.ToLower(q.Name))
 		}
 
@@ -161,15 +163,8 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 		}
 	}
 
-	if nodes == nil {
-		replyCode = dns.RcodeNameError
-		return
-	}
-
-	if soa.NS != "" {
-		replyMsg.Authoritative = true
-
-		if hasApex {
+	if nodes != nil {
+		if hasApex && soa.authority() {
 			if replyType(&q, dns.TypeSOA) {
 				replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
 			}
@@ -186,87 +181,92 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 				})
 			}
 		}
-	}
 
-	for _, node := range nodes {
-		var name string
+		for _, node := range nodes {
+			var name string
 
-		switch node.Name {
-		case naming.Apex:
-			name = q.Name
-
-		case naming.Wildcard:
-			name = "*." + q.Name
-
-		default:
-			if hasApex {
-				name = node.Name + "." + q.Name
-			} else {
+			switch node.Name {
+			case naming.Apex:
 				name = q.Name
+
+			case naming.Wildcard:
+				name = "*." + q.Name
+
+			default:
+				if hasApex {
+					name = node.Name + "." + q.Name
+				} else {
+					name = q.Name
+				}
+			}
+
+			if len(node.Addr.A) != 0 && replyType(&q, dns.TypeA) {
+				replyMsg.Answer = append(replyMsg.Answer, &dns.A{
+					Hdr: dns.RR_Header{
+						Name:   name,
+						Rrtype: dns.TypeA,
+						Class:  dns.ClassINET,
+						Ttl:    node.Addr.TTL,
+					},
+					A: node.Addr.A,
+				})
+			}
+
+			if len(node.Addr.AAAA) != 0 && replyType(&q, dns.TypeAAAA) {
+				replyMsg.Answer = append(replyMsg.Answer, &dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:   name,
+						Rrtype: dns.TypeAAAA,
+						Class:  dns.ClassINET,
+						Ttl:    node.Addr.TTL,
+					},
+					AAAA: node.Addr.AAAA,
+				})
+			}
+
+			if len(node.TXT.Values) != 0 && replyType(&q, dns.TypeTXT) {
+				replyMsg.Answer = append(replyMsg.Answer, &dns.TXT{
+					Hdr: dns.RR_Header{
+						Name:   name,
+						Rrtype: dns.TypeTXT,
+						Class:  dns.ClassINET,
+						Ttl:    node.TXT.TTL,
+					},
+					Txt: node.TXT.Values,
+				})
 			}
 		}
 
-		if len(node.Addr.A) != 0 && replyType(&q, dns.TypeA) {
-			replyMsg.Answer = append(replyMsg.Answer, &dns.A{
-				Hdr: dns.RR_Header{
-					Name:   name,
-					Rrtype: dns.TypeA,
-					Class:  dns.ClassINET,
-					Ttl:    node.Addr.TTL,
-				},
-				A: node.Addr.A,
-			})
+		if q.Qtype == dns.TypeAXFR {
+			// AXFR is concluded with repeated SOA record
+			replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
 		}
 
-		if len(node.Addr.AAAA) != 0 && replyType(&q, dns.TypeAAAA) {
-			replyMsg.Answer = append(replyMsg.Answer, &dns.AAAA{
-				Hdr: dns.RR_Header{
-					Name:   name,
-					Rrtype: dns.TypeAAAA,
-					Class:  dns.ClassINET,
-					Ttl:    node.Addr.TTL,
-				},
-				AAAA: node.Addr.AAAA,
-			})
-		}
-
-		if len(node.TXT.Values) != 0 && replyType(&q, dns.TypeTXT) {
-			replyMsg.Answer = append(replyMsg.Answer, &dns.TXT{
-				Hdr: dns.RR_Header{
-					Name:   name,
-					Rrtype: dns.TypeTXT,
-					Class:  dns.ClassINET,
-					Ttl:    node.TXT.TTL,
-				},
-				Txt: node.TXT.Values,
-			})
-		}
+		replyCode = dns.RcodeSuccess
+	} else {
+		replyCode = dns.RcodeNameError
 	}
 
-	if q.Qtype == dns.TypeAXFR {
-		// AXFR is concluded with repeated SOA record
-		replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
+	// RFC 2308, Section 3: SOA in Authority section for negative answers
+	if negativeAnswer(&replyMsg, replyCode) && soa.authority() {
+		replyMsg.Ns = append(replyMsg.Ns, soaAnswer(&q, soa))
 	}
-
-	replyCode = dns.RcodeSuccess
 }
 
 // replyType returns true if records with recordType should be included in the
 // reply message for the given question.
 func replyType(q *dns.Question, recordType uint16) bool {
 	switch q.Qtype {
-	case dns.TypeAXFR:
-		return true
-
-	case dns.TypeANY:
-		return true
-
-	case recordType:
+	case dns.TypeAXFR, dns.TypeANY, recordType:
 		return true
 
 	default:
 		return false
 	}
+}
+
+func negativeAnswer(replyMsg *dns.Msg, replyCode int) bool {
+	return replyCode == dns.RcodeNameError || len(replyMsg.Answer) == 0
 }
 
 func soaAnswer(q *dns.Question, soa *SOA) *dns.SOA {

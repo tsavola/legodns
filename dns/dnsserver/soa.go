@@ -13,7 +13,7 @@ const (
 	soaDefaultRefresh = 2 * 60 * 60
 	soaDefaultRetry   = 15 * 60
 	soaDefaultExpire  = 14 * 24 * 60 * 60
-	soaDefaultMinTTL  = 1
+	soaDefaultMinTTL  = 60 * 60
 	soaDefaultTTL     = 60 * 60
 )
 
@@ -26,7 +26,7 @@ type SOA struct {
 	Refresh uint32 // Defaults to a reasonable value
 	Retry   uint32 // Defaults to a reasonable value
 	Expire  uint32 // Defaults to a reasonable value
-	MinTTL  uint32 // Defaults to a very small value
+	MinTTL  uint32 // Defaults to a reasonable value
 	TTL     uint32 // Defaults to a reasonable value
 }
 
@@ -57,4 +57,8 @@ func (soa *SOA) init() error {
 	}
 
 	return nil
+}
+
+func (soa *SOA) authority() bool {
+	return soa.NS != ""
 }
