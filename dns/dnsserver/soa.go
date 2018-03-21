@@ -9,20 +9,19 @@ import (
 )
 
 const (
-	soaDefaultSerial  = 1
-	soaDefaultRefresh = 2 * 60 * 60
-	soaDefaultRetry   = 15 * 60
-	soaDefaultExpire  = 14 * 24 * 60 * 60
-	soaDefaultMinTTL  = 60 * 60
-	soaDefaultTTL     = 60 * 60
+	defaultRefresh = 2 * 60 * 60
+	defaultRetry   = 15 * 60
+	defaultExpire  = 14 * 24 * 60 * 60
+	defaultMinTTL  = 60 * 60
+	defaultTTL     = 60 * 60
 )
 
 // SOA record.  Zero value implies no authority.  If NS is specified, Mbox is
 // also required.
 type SOA struct {
-	NS      string
-	Mbox    string
-	Serial  uint32 // Defaults to 1
+	NS   string
+	Mbox string
+
 	Refresh uint32 // Defaults to a reasonable value
 	Retry   uint32 // Defaults to a reasonable value
 	Expire  uint32 // Defaults to a reasonable value
@@ -36,23 +35,20 @@ func (soa *SOA) init() error {
 			return errors.New("dnsserver: SOA.NS field specified without SOA.Mbox")
 		}
 
-		if soa.Serial == 0 {
-			soa.Serial = soaDefaultSerial
-		}
 		if soa.Refresh == 0 {
-			soa.Refresh = soaDefaultRefresh
+			soa.Refresh = defaultRefresh
 		}
 		if soa.Retry == 0 {
-			soa.Retry = soaDefaultRetry
+			soa.Retry = defaultRetry
 		}
 		if soa.Expire == 0 {
-			soa.Expire = soaDefaultExpire
+			soa.Expire = defaultExpire
 		}
 		if soa.MinTTL == 0 {
-			soa.MinTTL = soaDefaultMinTTL
+			soa.MinTTL = defaultMinTTL
 		}
 		if soa.TTL == 0 {
-			soa.TTL = soaDefaultTTL
+			soa.TTL = defaultTTL
 		}
 	}
 

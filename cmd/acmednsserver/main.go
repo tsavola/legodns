@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"os"
 	"time"
@@ -42,7 +41,6 @@ func Main() (err error) {
 		listen    = ":53"
 		ns        = ""
 		email     = ""
-		serial    int64
 		domain    = "example.invalid."
 		a         = ""
 		aaaa      = ""
@@ -63,7 +61,6 @@ func Main() (err error) {
 	flag.StringVar(&listen, "l", listen, "listening address")
 	flag.StringVar(&ns, "ns", ns, "name of this authoritative name server")
 	flag.StringVar(&email, "email", email, "admin email address (required with -ns and/or -cert)")
-	flag.Int64Var(&serial, "serial", serial, "zone serial number (defaults to time-based value)")
 	flag.StringVar(&domain, "domain", domain, "zone name")
 	flag.StringVar(&a, "a", a, "IPv4 address")
 	flag.StringVar(&aaaa, "aaaa", aaaa, "IPv6 address")
@@ -99,24 +96,15 @@ func Main() (err error) {
 		}
 	}
 
-	if serial < 0 || serial > math.MaxUint32 {
-		log.Fatalf("Serial number is out of bounds: %d", serial)
-	}
-
 	config := &dnsserver.Config{
 		Addr:     listen,
 		ErrorLog: logger,
 		DebugLog: logger,
 		Ready:    make(chan struct{}),
 		SOA: dnsserver.SOA{
-			NS:     dnsserver.DotSuffix(ns),
-			Mbox:   mbox,
-			Serial: uint32(serial),
+			NS:   dnsserver.DotSuffix(ns),
+			Mbox: mbox,
 		},
-	}
-
-	if config.SOA.Serial == 0 {
-		config.SOA.Serial = dnsserver.TimeSerial(time.Now())
 	}
 
 	ttl := uint32(dtl / time.Second)
@@ -150,7 +138,7 @@ func Main() (err error) {
 		zone.Nodes[dns.Wildcard] = rs
 	}
 
-	zones := dnszone.Contain(zone)
+	zones := dnszone.Init(zone)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

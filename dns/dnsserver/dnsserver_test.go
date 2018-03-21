@@ -42,7 +42,7 @@ func TestServer(t *testing.T) {
 		Domain: "example.com.",
 	}
 
-	zones := dnszone.Contain(orgZone, comZone)
+	zones := dnszone.Init(orgZone, comZone)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -60,8 +60,8 @@ func TestServer(t *testing.T) {
 		Net: "tcp",
 	}
 
-	for _, name := range []string{"_acme-challenge.example.org.", "example.org.", "www.example.com.", "www.example.net."} {
-		for _, typ := range []uint16{dnsclient.TypeA, dnsclient.TypeAAAA, dnsclient.TypeTXT} {
+	for i, name := range []string{"_acme-challenge.example.org.", "example.org.", "www.example.com.", "www.example.net."} {
+		for j, typ := range []uint16{dnsclient.TypeA, dnsclient.TypeAAAA, dnsclient.TypeTXT} {
 			msg := new(dnsclient.Msg)
 			msg.SetQuestion(name, typ)
 
@@ -72,9 +72,13 @@ func TestServer(t *testing.T) {
 				t.Log(in)
 			}
 
-			err = zones.ModifyTXTRecord(ctx, "example.org.", "_acme-challenge", []string{"asdf"}, 1)
-			if err != nil {
-				t.Error(err)
+			if i == 0 && j == 0 {
+				go zones.ModifyTXTRecord(ctx, "example.org.", "_acme-challenge", []string{"asdf"}, 1)
+
+				err = zones.ModifyTXTRecord(ctx, "example.org.", "_acme-challenge", []string{"qwerty"}, 2)
+				if err != nil {
+					t.Error(err)
+				}
 			}
 		}
 	}

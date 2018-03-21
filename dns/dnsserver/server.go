@@ -13,6 +13,11 @@ import (
 	naming "github.com/tsavola/acmedns/dns"
 )
 
+const (
+	// Serial number used for negative answers.
+	defaultSerial = 1
+)
+
 type Config struct {
 	Addr  string // Defaults to ":dns"
 	NoTCP bool
@@ -145,26 +150,30 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 	replyMsg.Authoritative = soa.authority()
 
 	var (
-		hasApex bool
+		serial  uint32
 		nodes   []naming.Node
+		hasApex bool
 	)
 
 	if transferReq(&q) {
 		if soa.authority() {
+			nodes, serial = resolver.TransferZone(strings.ToLower(q.Name))
 			hasApex = true
-			nodes = resolver.TransferZone(strings.ToLower(q.Name))
 		}
 	} else {
-		if node := resolver.ResolveResource(strings.ToLower(q.Name)); node.Name != "" {
-			hasApex = (node.Name == naming.Apex)
+		var node naming.Node
+
+		node, serial = resolver.ResolveResource(strings.ToLower(q.Name))
+		if node.Name != "" {
 			nodes = []naming.Node{node}
+			hasApex = (node.Name == naming.Apex)
 		}
 	}
 
 	if nodes != nil {
 		if hasApex && soa.authority() {
 			if replyType(&q, dns.TypeSOA) {
-				replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
+				replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa, serial))
 			}
 
 			if replyType(&q, dns.TypeNS) {
@@ -249,7 +258,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 
 		if transferReq(&q) {
 			// Zone transfer is concluded with repeated SOA record
-			replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa))
+			replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa, serial))
 		}
 
 		replyCode = dns.RcodeSuccess
@@ -259,7 +268,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 
 	// RFC 2308, Section 3: SOA in Authority section for negative answers
 	if negativeAnswer(&replyMsg, replyCode) && soa.authority() {
-		replyMsg.Ns = append(replyMsg.Ns, soaAnswer(&q, soa))
+		replyMsg.Ns = append(replyMsg.Ns, soaAnswer(&q, soa, serial))
 	}
 }
 
@@ -290,7 +299,11 @@ func negativeAnswer(replyMsg *dns.Msg, replyCode int) bool {
 	return replyCode == dns.RcodeNameError || len(replyMsg.Answer) == 0
 }
 
-func soaAnswer(q *dns.Question, soa *SOA) *dns.SOA {
+func soaAnswer(q *dns.Question, soa *SOA, serial uint32) *dns.SOA {
+	if serial == 0 {
+		serial = defaultSerial
+	}
+
 	return &dns.SOA{
 		Hdr: dns.RR_Header{
 			Name:   q.Name,
@@ -300,7 +313,7 @@ func soaAnswer(q *dns.Question, soa *SOA) *dns.SOA {
 		},
 		Ns:      soa.NS,
 		Mbox:    soa.Mbox,
-		Serial:  soa.Serial,
+		Serial:  serial,
 		Refresh: soa.Refresh,
 		Retry:   soa.Retry,
 		Expire:  soa.Expire,
