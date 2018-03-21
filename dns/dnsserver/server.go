@@ -317,6 +317,6 @@ func soaAnswer(q *dns.Question, soa *SOA, serial uint32) *dns.SOA {
 		Refresh: soa.Refresh,
 		Retry:   soa.Retry,
 		Expire:  soa.Expire,
-		Minttl:  soa.MinTTL,
+		Minttl:  soa.TTL,
 	}
 }

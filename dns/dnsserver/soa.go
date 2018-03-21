@@ -12,12 +12,14 @@ const (
 	defaultRefresh = 2 * 60 * 60
 	defaultRetry   = 15 * 60
 	defaultExpire  = 14 * 24 * 60 * 60
-	defaultMinTTL  = 60 * 60
 	defaultTTL     = 60 * 60
 )
 
-// SOA record.  Zero value implies no authority.  If NS is specified, Mbox is
-// also required.
+// SOA and primary NS information.  NS and Mbox fields must both be specified
+// or empty.  If they are specified, the server is authoritative for all zones
+// (specified elsewhere).
+//
+// TTL is used for SOA and NS records' TTL and MINIMUM values.
 type SOA struct {
 	NS   string
 	Mbox string
@@ -25,7 +27,6 @@ type SOA struct {
 	Refresh uint32 // Defaults to a reasonable value
 	Retry   uint32 // Defaults to a reasonable value
 	Expire  uint32 // Defaults to a reasonable value
-	MinTTL  uint32 // Defaults to a reasonable value
 	TTL     uint32 // Defaults to a reasonable value
 }
 
@@ -43,9 +44,6 @@ func (soa *SOA) init() error {
 		}
 		if soa.Expire == 0 {
 			soa.Expire = defaultExpire
-		}
-		if soa.MinTTL == 0 {
-			soa.MinTTL = defaultMinTTL
 		}
 		if soa.TTL == 0 {
 			soa.TTL = defaultTTL
