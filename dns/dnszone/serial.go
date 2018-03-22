@@ -10,11 +10,9 @@ import (
 	"time"
 )
 
-const (
-	SerialEpoch = 1500000000 // Unix time
-)
+const SerialEpoch = 1500000000 // Unix time
 
-// TimeSerial creates a time-based serial number.  It has 1-second
+// TimeSerial returns a time-based serial number.  It has 1-second
 // granularity. It is only defined for dates roughly between 2017-07-15
 // (SerialEpoch) and 2106-02-06 (32-bit unsigned integer wrap-around).
 //

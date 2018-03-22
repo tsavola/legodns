@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// EmailMbox converts "admin@example.org" to "admin.example.org." etc.  It
-// rejects "user.name@example.org" etc.  Empty string is passed through.
+// EmailMbox converts ``admin@example.org'' to ``admin.example.org.'', but
+// rejects ``user.name@example.org''.  Empty string is passed through.
 func EmailMbox(email string) (mbox string, err error) {
 	if at := strings.Index(email, "@"); at >= 0 {
 		if dot := strings.Index(email, "."); dot >= 0 && dot < at {
@@ -25,8 +25,7 @@ func EmailMbox(email string) (mbox string, err error) {
 	return
 }
 
-// DotSuffix ensures that the string as a dot suffix, unless it is the empty
-// string.
+// DotSuffix ensures that the string has a dot at the end, unless it is empty.
 func DotSuffix(name string) string {
 	if name != "" && !strings.HasSuffix(name, ".") {
 		name += "."

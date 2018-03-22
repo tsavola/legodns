@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package dnszone implements a simple DNS zone container.
+//
+// See the top-level package for general documentation.
 package dnszone
 
 import (
@@ -13,7 +16,8 @@ import (
 	"github.com/tsavola/acmedns/dns"
 )
 
-// Container implements acmedns.DNS, autocert.DNS, and dnsserver.Resolver.
+// Container of zones.  Implements acmedns.DNS, autocert.DNS, and
+// dnsserver.Resolver.
 type Container struct {
 	mutex sync.RWMutex
 	zones []*Zone
@@ -158,7 +162,9 @@ func (c *Container) applyChanges() {
 	c.changeZones = nil
 }
 
-// Zone must not be modified directly after its Container has been used for
+// Zone enumerates the nodes of a domain.
+//
+// Must not be modified directly after its Container has been used for
 // resolving resources or transferring zones.
 type Zone struct {
 	Domain string

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package acmedns provides ACME-based TLS certificate renewal via a standalone
-// DNS server.
 package acmedns
 
 import (

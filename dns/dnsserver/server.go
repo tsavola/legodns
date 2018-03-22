@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package dnsserver implements a simple, authoritative DNS server.  It is
+// built upon https://github.com/miekg/dns.
+//
+// See the top-level package for general documentation.
 package dnsserver
 
 import (
@@ -18,6 +22,7 @@ const (
 	defaultSerial = 1
 )
 
+// Config of DNS server.
 type Config struct {
 	Addr  string // Defaults to ":dns"
 	NoTCP bool
@@ -34,6 +39,8 @@ type Config struct {
 	SOA SOA
 }
 
+// Serve DNS requests for the duration of the context.  Resolver implementation
+// effectively defines the zones.  Configuration is optional.
 func Serve(ctx context.Context, resolver Resolver, serverConfig *Config) (err error) {
 	var config Config
 

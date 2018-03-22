@@ -4,6 +4,7 @@
 
 package autocert
 
+// Logger is a subset of log.Logger.
 type Logger interface {
 	Printf(fmt string, args ...interface{})
 }

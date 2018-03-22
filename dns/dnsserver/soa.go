@@ -15,14 +15,14 @@ const (
 	defaultTTL     = 60 * 60
 )
 
-// SOA and primary NS information.  NS and Mbox fields must both be specified
-// or empty.  If they are specified, the server is authoritative for all zones
-// (specified elsewhere).
+// SOA and primary NS record information.  NS and Mbox fields must both be
+// specified or empty.  If they are specified, the server is authoritative for
+// all zones (which are specified elsewhere).
 //
 // TTL is used for SOA and NS records' TTL and MINIMUM values.
 type SOA struct {
-	NS   string
-	Mbox string
+	NS   string // Name of this name server (like "example.net.")
+	Mbox string // Email mailbox (like "hostmaster.example.net.")
 
 	Refresh uint32 // Defaults to a reasonable value
 	Retry   uint32 // Defaults to a reasonable value
