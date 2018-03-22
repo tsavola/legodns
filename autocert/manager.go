@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package autocert is modeled after and based on
+// Package autocert is modeled after and built on
 // https://golang.org/x/crypto/acme/autocert.
 //
 // See the top-level package for general documentation.

@@ -19,7 +19,7 @@ It can obtain and renew TLS certificates behind the scenes, during the normal
 operation of a TLS listener.  A DNS backend must be plugged in to help it
 fulfill ACME's DNS challenges.
 
-The dns/dnsserver subpackage implements an simple, authoritative DNS server.
+The dns/dnsserver subpackage implements a simple, authoritative DNS server.
 It expects a zone database to be plugged in.
 
 The dns/dnszone subpackage implements just such a zone container.  The
