@@ -18,7 +18,7 @@ const (
 
 const (
 	challengeNode = "_acme-challenge"
-	challengeTTL  = 5 * 60 // seconds
+	challengeTTL  = 1 // second
 )
 
 // DNS can create/update TXT records on name servers.  It doesn't have to be
@@ -41,12 +41,12 @@ func Verify(ctx context.Context, client *acme.Client, dns DNS, serverName, zone 
 		err = fmt.Errorf("acmedns: invalid authorization %q", authz.URI)
 
 	default:
-		_, err = AcquireAuthorization(ctx, client, authz, dns, zone)
+		_, err = acquireAuthorization(ctx, client, authz, dns, zone)
 	}
 	return
 }
 
-func AcquireAuthorization(ctx context.Context, client *acme.Client, authz *acme.Authorization, dns DNS, zone string) (*acme.Authorization, error) {
+func acquireAuthorization(ctx context.Context, client *acme.Client, authz *acme.Authorization, dns DNS, zone string) (*acme.Authorization, error) {
 	combos := authz.Combinations
 	if len(combos) == 0 {
 		combo := make([]int, len(authz.Challenges))
@@ -65,8 +65,9 @@ func AcquireAuthorization(ctx context.Context, client *acme.Client, authz *acme.
 		if len(combo) == 1 {
 			if i := combo[0]; i < len(authz.Challenges) {
 				chal := authz.Challenges[i]
-				err = FulfillChallenge(ctx, client, chal, dns, zone)
+				err = fulfillChallenge(ctx, client, chal, dns, zone)
 				if err == nil {
+					defer undoChallenge(ctx, dns, zone) // After WaitAuthorization
 					accepted, err = client.Accept(ctx, chal)
 					if err == nil {
 						break
@@ -86,7 +87,7 @@ func AcquireAuthorization(ctx context.Context, client *acme.Client, authz *acme.
 	return client.WaitAuthorization(ctx, authz.URI)
 }
 
-func FulfillChallenge(ctx context.Context, client *acme.Client, chal *acme.Challenge, dns DNS, zone string) error {
+func fulfillChallenge(ctx context.Context, client *acme.Client, chal *acme.Challenge, dns DNS, zone string) error {
 	if chal.Type != challengeType {
 		return errors.New("acmedns: unsupported challenge types")
 	}
@@ -97,4 +98,8 @@ func FulfillChallenge(ctx context.Context, client *acme.Client, chal *acme.Chall
 	}
 
 	return dns.ModifyTXTRecord(ctx, zone, challengeNode, []string{value}, challengeTTL)
+}
+
+func undoChallenge(ctx context.Context, dns DNS, zone string) error {
+	return dns.ModifyTXTRecord(ctx, zone, challengeNode, nil, 0)
 }

@@ -228,18 +228,32 @@ func (z *Zone) transfer() (results []dns.Node) {
 }
 
 func (z *Zone) modifyTXTRecord(node string, values []string, ttl uint32) {
-	if z.Nodes == nil {
-		z.Nodes = make(map[string]*dns.Records)
-	}
+	if len(values) > 0 {
+		if z.Nodes == nil {
+			z.Nodes = make(map[string]*dns.Records)
+		}
 
-	rs := z.Nodes[node]
-	if rs == nil {
-		rs = new(dns.Records)
-		z.Nodes[node] = rs
-	}
+		rs := z.Nodes[node]
+		if rs == nil {
+			rs = new(dns.Records)
+			z.Nodes[node] = rs
+		}
 
-	rs.TXT = dns.TextRecord{
-		Values: append([]string(nil), values...), // copy
-		TTL:    ttl,
+		rs.TXT = dns.TextRecord{
+			Values: append([]string(nil), values...), // copy
+			TTL:    ttl,
+		}
+	} else {
+		rs := z.Nodes[node]
+		if rs != nil {
+			rs.TXT = dns.TextRecord{
+				Values: nil,
+				TTL:    0,
+			}
+
+			if rs.Empty() {
+				delete(z.Nodes, node)
+			}
+		}
 	}
 }

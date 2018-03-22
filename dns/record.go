@@ -14,6 +14,10 @@ type Records struct {
 	NS   StringRecord
 }
 
+func (rs *Records) Empty() bool {
+	return len(rs.Addr.A) == 0 && len(rs.Addr.AAAA) == 0 && len(rs.TXT.Values) == 0 && rs.NS.Value == ""
+}
+
 func (rs *Records) DeepCopy() Records {
 	return Records{
 		Addr: rs.Addr.DeepCopy(),
