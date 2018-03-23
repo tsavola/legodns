@@ -12,6 +12,6 @@ const (
 
 // NodeRecords carries information about a host within a zone.
 type NodeRecords struct {
-	Name    string // Empty name indicates nonexistent/unknown node
+	Name    string
 	Records Records
 }
