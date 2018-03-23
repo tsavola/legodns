@@ -43,15 +43,15 @@ func InitWithSerial(serial uint32, zones ...*Zone) *Container {
 	}
 }
 
-func (c *Container) ResolveRecords(name string, filter dns.RecordType) (result dns.Node, serial uint32) {
+func (c *Container) ResolveRecords(name string, filter dns.RecordType) (node string, results dns.Records, serial uint32) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
 	for _, z := range c.zones {
-		if node, ok := z.matchResource(name); ok {
-			result.Name = node
+		node = z.matchResource(name)
+		if node != "" {
 			if rs := z.resolveNode(node); rs != nil {
-				result.Records = rs.DeepCopyRecords(filter)
+				results = rs.DeepCopyRecords(filter)
 			}
 			serial = z.serial
 			return
@@ -68,7 +68,7 @@ func (c *Container) ResolveZone(ctx context.Context, hostname string) (domain st
 	var zoneFound bool
 
 	for _, z := range c.zones {
-		if node, ok := z.matchResource(hostname); ok {
+		if node := z.matchResource(hostname); node != "" {
 			zoneFound = true
 			if z.resolveNode(node) != nil {
 				domain = z.Domain
@@ -179,17 +179,15 @@ type Zone struct {
 	serial uint32 // managed by Container
 }
 
-func (z *Zone) matchResource(name string) (node string, ok bool) {
+func (z *Zone) matchResource(name string) (node string) {
 	switch {
 	case z.Domain == name:
 		node = dns.Apex
-		ok = true
 
 	case strings.HasSuffix(name, "."+z.Domain):
 		prefix := name[:len(name)-1-len(z.Domain)]
 		if !strings.Contains(prefix, ".") {
 			node = prefix
-			ok = true
 		}
 	}
 

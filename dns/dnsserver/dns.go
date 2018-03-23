@@ -10,9 +10,9 @@ import (
 
 // Resolver can dump host and zone records.  It must be instantaneous.
 type Resolver interface {
-	// ResolveRecords copies a host's records.  It should return the zero value
-	// if and only if the name doesn't fall into any known zone: unknown node
-	// names in known zones should be returned without records.
+	// ResolveRecords copies a host's records.  It should return empty node
+	// name if and only if the host name doesn't fall into any known zone:
+	// unknown node names in known zones should be returned without records.
 	//
 	// The filter parameter selects a single record type, or all records if
 	// dns.TypeAny is specified.  Unknown values must be handled by returning
@@ -20,7 +20,7 @@ type Resolver interface {
 	//
 	// serial is the current serial number of the node's zone.  It is non-zero
 	// for known zones, and zero if zone wasn't found.
-	ResolveRecords(hostname string, filter dns.RecordType) (match dns.Node, serial uint32)
+	ResolveRecords(hostname string, filter dns.RecordType) (node string, rs dns.Records, serial uint32)
 
 	// TransferZone copies the contents of a domain.  The apex node must be
 	// first, if present.

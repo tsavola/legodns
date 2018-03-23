@@ -168,12 +168,15 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 			hasApex = true
 		}
 	} else {
-		var node naming.Node
+		var (
+			node string
+			rs   naming.Records
+		)
 
-		node, serial = resolver.ResolveRecords(strings.ToLower(q.Name), naming.RecordType(q.Qtype))
-		if node.Name != "" {
-			nodes = []naming.Node{node}
-			hasApex = (node.Name == naming.Apex)
+		node, rs, serial = resolver.ResolveRecords(strings.ToLower(q.Name), naming.RecordType(q.Qtype))
+		if node != "" {
+			nodes = []naming.Node{{Name: node, Records: rs}}
+			hasApex = (node == naming.Apex)
 		}
 	}
 
