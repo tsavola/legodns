@@ -4,7 +4,9 @@
 
 package dns
 
-import "net"
+import (
+	"net"
+)
 
 type RecordType uint16
 
@@ -14,6 +16,8 @@ const (
 	TypeNS              = 2
 	TypeTXT             = 16
 	TypeAAAA            = 28
+
+	TypeAny = 255 // only for matching against actual resource types
 )
 
 type Record interface {
@@ -46,10 +50,17 @@ func (RecordAAAA) Type() RecordType { return TypeAAAA }
 // be more than one item of a given type.
 type Records []Record
 
-func (source Records) DeepCopy() Records {
+func (rs Records) DeepCopy() Records {
+	return rs.DeepCopyRecords(TypeAny)
+}
+
+func (source Records) DeepCopyRecords(filter RecordType) Records {
 	target := make(Records, 0, len(source))
 	for _, r := range source {
-		target = append(target, r.DeepCopy())
+		switch filter {
+		case TypeAny, r.Type():
+			target = append(target, r.DeepCopy())
+		}
 	}
 	return target
 }

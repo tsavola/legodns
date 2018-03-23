@@ -43,7 +43,7 @@ func InitWithSerial(serial uint32, zones ...*Zone) *Container {
 	}
 }
 
-func (c *Container) ResolveResource(name string) (result dns.Node, serial uint32) {
+func (c *Container) ResolveRecords(name string, filter dns.RecordType) (result dns.Node, serial uint32) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -51,7 +51,7 @@ func (c *Container) ResolveResource(name string) (result dns.Node, serial uint32
 		if node, ok := z.matchResource(name); ok {
 			result.Name = node
 			if rs := z.resolveNode(node); rs != nil {
-				result.Records = rs.DeepCopy()
+				result.Records = rs.DeepCopyRecords(filter)
 			}
 			serial = z.serial
 			return

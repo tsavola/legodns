@@ -170,7 +170,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 	} else {
 		var node naming.Node
 
-		node, serial = resolver.ResolveResource(strings.ToLower(q.Name))
+		node, serial = resolver.ResolveRecords(strings.ToLower(q.Name), naming.RecordType(q.Qtype))
 		if node.Name != "" {
 			nodes = []naming.Node{node}
 			hasApex = (node.Name == naming.Apex)
@@ -215,9 +215,10 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 			}
 
 			for _, x := range node.Records {
-				switch r := x.(type) {
-				case naming.RecordNS:
+				switch t := x.Type(); t {
+				case naming.TypeNS:
 					if replyType(&q, dns.TypeNS) {
+						r := x.(naming.RecordNS)
 						replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
 							Hdr: dns.RR_Header{
 								Name:   name,
@@ -229,8 +230,9 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 						})
 					}
 
-				case naming.RecordA:
+				case naming.TypeA:
 					if replyType(&q, dns.TypeA) {
+						r := x.(naming.RecordA)
 						replyMsg.Answer = append(replyMsg.Answer, &dns.A{
 							Hdr: dns.RR_Header{
 								Name:   name,
@@ -242,8 +244,9 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 						})
 					}
 
-				case naming.RecordAAAA:
+				case naming.TypeAAAA:
 					if replyType(&q, dns.TypeAAAA) {
+						r := x.(naming.RecordAAAA)
 						replyMsg.Answer = append(replyMsg.Answer, &dns.AAAA{
 							Hdr: dns.RR_Header{
 								Name:   name,
@@ -255,8 +258,9 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 						})
 					}
 
-				case naming.RecordTXT:
+				case naming.TypeTXT:
 					if replyType(&q, dns.TypeTXT) {
+						r := x.(naming.RecordTXT)
 						replyMsg.Answer = append(replyMsg.Answer, &dns.TXT{
 							Hdr: dns.RR_Header{
 								Name:   name,
@@ -270,7 +274,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 
 				default:
 					if debugLog != nil {
-						debugLog.Printf("dnsserver: node %q has unknown record type: %v", name, x)
+						debugLog.Printf("dnsserver: node %q has unknown record type: %v", name, t)
 					}
 				}
 			}
