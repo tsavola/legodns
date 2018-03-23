@@ -85,7 +85,7 @@ func (c *Container) ResolveZone(ctx context.Context, hostname string) (domain st
 	return
 }
 
-func (c *Container) TransferZone(name string) (results []dns.Node, serial uint32) {
+func (c *Container) TransferZone(name string) (results []dns.NodeRecords, serial uint32) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -202,11 +202,11 @@ func (z *Zone) resolveNode(node string) (rs dns.Records) {
 	return
 }
 
-func (z *Zone) transfer() (results []dns.Node) {
-	results = make([]dns.Node, 0, len(z.Nodes))
+func (z *Zone) transfer() (results []dns.NodeRecords) {
+	results = make([]dns.NodeRecords, 0, len(z.Nodes))
 
 	if rs := z.Nodes[dns.Apex]; rs != nil {
-		results = append(results, dns.Node{
+		results = append(results, dns.NodeRecords{
 			Name:    dns.Apex,
 			Records: rs.DeepCopy(),
 		})
@@ -214,7 +214,7 @@ func (z *Zone) transfer() (results []dns.Node) {
 
 	for name, rs := range z.Nodes {
 		if name != dns.Apex && name != dns.Wildcard {
-			results = append(results, dns.Node{
+			results = append(results, dns.NodeRecords{
 				Name:    name,
 				Records: rs.DeepCopy(),
 			})
@@ -222,7 +222,7 @@ func (z *Zone) transfer() (results []dns.Node) {
 	}
 
 	if rs := z.Nodes[dns.Wildcard]; rs != nil {
-		results = append(results, dns.Node{
+		results = append(results, dns.NodeRecords{
 			Name:    dns.Wildcard,
 			Records: rs.DeepCopy(),
 		})

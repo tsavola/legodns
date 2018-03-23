@@ -158,7 +158,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 
 	var (
 		serial  uint32
-		nodes   []naming.Node
+		nodes   []naming.NodeRecords
 		hasApex bool
 	)
 
@@ -175,7 +175,7 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 
 		node, rs, serial = resolver.ResolveRecords(strings.ToLower(q.Name), naming.RecordType(q.Qtype))
 		if node != "" {
-			nodes = []naming.Node{{Name: node, Records: rs}}
+			nodes = []naming.NodeRecords{{Name: node, Records: rs}}
 			hasApex = (node == naming.Apex)
 		}
 	}

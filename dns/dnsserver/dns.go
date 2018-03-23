@@ -27,5 +27,5 @@ type Resolver interface {
 	//
 	// serial is the current serial number of the zone.  It is non-zero if the
 	// zone was found, and zero if not.
-	TransferZone(domain string) (zone []dns.Node, serial uint32)
+	TransferZone(domain string) (zone []dns.NodeRecords, serial uint32)
 }

@@ -10,8 +10,8 @@ const (
 	Wildcard = "*"
 )
 
-// Node carries information about a host within a zone.
-type Node struct {
+// NodeRecords carries information about a host within a zone.
+type NodeRecords struct {
 	Name    string // Empty name indicates nonexistent/unknown node
 	Records Records
 }
