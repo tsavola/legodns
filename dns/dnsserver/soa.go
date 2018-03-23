@@ -21,7 +21,7 @@ const (
 //
 // TTL is used for SOA and NS records' TTL and MINIMUM values.
 type SOA struct {
-	NS   string // Name of this name server (like "example.net.")
+	NS   string // Name of this name server (like "ns1.example.net.")
 	Mbox string // Email mailbox (like "hostmaster.example.net.")
 
 	Refresh uint32 // Defaults to a reasonable value
