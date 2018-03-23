@@ -6,9 +6,20 @@ package dns
 
 import "net"
 
+type RecordType uint16
+
+// Types of DNS records.  The values must match the standard ones.
+const (
+	TypeA    RecordType = 1
+	TypeNS              = 2
+	TypeTXT             = 16
+	TypeAAAA            = 28
+)
+
 type Record interface {
 	DeepCopy() Record
 	Empty() bool
+	Type() RecordType
 }
 
 type RecordA IPRecord
@@ -25,6 +36,11 @@ func (r RecordA) Empty() bool    { return len(r.Value) == 0 }
 func (r RecordNS) Empty() bool   { return r.Value == "" }
 func (r RecordTXT) Empty() bool  { return len(r.Values) == 0 }
 func (r RecordAAAA) Empty() bool { return len(r.Value) == 0 }
+
+func (RecordA) Type() RecordType    { return TypeA }
+func (RecordNS) Type() RecordType   { return TypeNS }
+func (RecordTXT) Type() RecordType  { return TypeTXT }
+func (RecordAAAA) Type() RecordType { return TypeAAAA }
 
 // Records contains Record*-type items (values, not pointers).  There must not
 // be more than one item of a given type.
