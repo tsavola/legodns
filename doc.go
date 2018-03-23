@@ -82,11 +82,11 @@ Steps 3, 4, and 5 as code:
 		// Step 5
 		zones := dnszone.Init(&dnszone.Zone{
 			Domain: "example.org.",
-			Nodes: map[string]*dns.Records{
-				dns.Wildcard: &dns.Records{
-					Addr: dns.AddrRecord{
-						A:   net.ParseIP("192.0.2.0"),
-						TTL: 7200,
+			Nodes: map[string]dns.Records{
+				dns.Wildcard: dns.Records{
+					dns.RecordA{
+						Value: net.ParseIP("192.0.2.0"),
+						TTL:   7200,
 					},
 				},
 			},
