@@ -9,6 +9,7 @@ package dnszone
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -99,7 +100,12 @@ func (c *Container) TransferZone(name string) (results []dns.Node, serial uint32
 	return
 }
 
-func (c *Container) ModifyTXTRecord(ctx context.Context, zoneName, node string, values []string, ttl uint32) error {
+// ModifyTXTRecord implements the focused acmedns.DNS interface.
+func (c *Container) ModifyTXTRecord(ctx context.Context, zone, node string, values []string, ttl uint32) error {
+	return c.ModifyRecord(ctx, zone, node, dns.RecordTXT{Values: values, TTL: ttl})
+}
+
+func (c *Container) ModifyRecord(ctx context.Context, zoneName, node string, r dns.Record) error {
 	c.mutex.Lock()
 
 	var targetZone *Zone
@@ -113,7 +119,7 @@ func (c *Container) ModifyTXTRecord(ctx context.Context, zoneName, node string, 
 
 	if targetZone != nil {
 		// Modify zone immediately without changing serial number.
-		targetZone.modifyTXTRecord(node, values, ttl)
+		targetZone.modifyRecord(node, r)
 
 		// Coalesce all serial number changes over a one-second period, and
 		// increment each zone's serial number just once at the end of that
@@ -227,20 +233,17 @@ func (z *Zone) transfer() (results []dns.Node) {
 	return
 }
 
-func (z *Zone) modifyTXTRecord(node string, values []string, ttl uint32) {
-	if len(values) > 0 {
+func (z *Zone) modifyRecord(node string, r dns.Record) {
+	t := reflect.TypeOf(r)
+
+	if !r.Empty() {
 		if z.Nodes == nil {
 			z.Nodes = make(map[string]dns.Records)
 		}
 
-		r := dns.RecordTXT{
-			Values: deepCopyStrings(values),
-			TTL:    ttl,
-		}
-
 		rs := z.Nodes[node]
 		for i, x := range rs {
-			if _, found := x.(dns.RecordTXT); found {
+			if reflect.TypeOf(x) == t {
 				rs[i] = r
 				return
 			}
@@ -249,7 +252,7 @@ func (z *Zone) modifyTXTRecord(node string, values []string, ttl uint32) {
 	} else {
 		rs := z.Nodes[node]
 		for i, x := range rs {
-			if _, found := x.(dns.RecordTXT); found {
+			if reflect.TypeOf(x) == t {
 				rs = append(rs[:i], rs[i+1:]...)
 				if len(rs) > 0 {
 					z.Nodes[node] = rs

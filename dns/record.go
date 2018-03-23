@@ -4,59 +4,36 @@
 
 package dns
 
-import (
-	"fmt"
-	"net"
-)
+import "net"
+
+type Record interface {
+	DeepCopy() Record
+	Empty() bool
+}
 
 type RecordA IPRecord
 type RecordNS StringRecord
 type RecordTXT StringsRecord
 type RecordAAAA IPRecord
 
-func (r *RecordA) DeepCopy() RecordA {
-	return RecordA((*IPRecord)(r).DeepCopy())
-}
+func (r RecordA) DeepCopy() Record    { return RecordA((*IPRecord)(&r).DeepCopy()) }
+func (r RecordNS) DeepCopy() Record   { return RecordNS((*StringRecord)(&r).DeepCopy()) }
+func (r RecordTXT) DeepCopy() Record  { return RecordTXT((*StringsRecord)(&r).DeepCopy()) }
+func (r RecordAAAA) DeepCopy() Record { return RecordAAAA((*IPRecord)(&r).DeepCopy()) }
 
-func (r *RecordNS) DeepCopy() RecordNS {
-	return RecordNS((*StringRecord)(r).DeepCopy())
-}
-
-func (r *RecordTXT) DeepCopy() RecordTXT {
-	return RecordTXT((*StringsRecord)(r).DeepCopy())
-}
-
-func (r *RecordAAAA) DeepCopy() RecordAAAA {
-	return RecordAAAA((*IPRecord)(r).DeepCopy())
-}
-
-func DeepCopyRecord(x interface{}) interface{} {
-	switch r := x.(type) {
-	case RecordA:
-		return r.DeepCopy()
-
-	case RecordNS:
-		return r.DeepCopy()
-
-	case RecordTXT:
-		return r.DeepCopy()
-
-	case RecordAAAA:
-		return r.DeepCopy()
-
-	default:
-		panic(fmt.Errorf("dns: not a record: %v", x))
-	}
-}
+func (r RecordA) Empty() bool    { return len(r.Value) == 0 }
+func (r RecordNS) Empty() bool   { return r.Value == "" }
+func (r RecordTXT) Empty() bool  { return len(r.Values) == 0 }
+func (r RecordAAAA) Empty() bool { return len(r.Value) == 0 }
 
 // Records contains Record*-type items (values, not pointers).  There must not
 // be more than one item of a given type.
-type Records []interface{}
+type Records []Record
 
 func (source Records) DeepCopy() Records {
 	target := make(Records, 0, len(source))
-	for _, x := range source {
-		target = append(target, DeepCopyRecord(x))
+	for _, r := range source {
+		target = append(target, r.DeepCopy())
 	}
 	return target
 }
