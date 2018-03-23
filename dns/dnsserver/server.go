@@ -214,52 +214,65 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 				}
 			}
 
-			if node.NS.Value != "" && replyType(&q, dns.TypeNS) {
-				replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
-					Hdr: dns.RR_Header{
-						Name:   name,
-						Rrtype: dns.TypeNS,
-						Class:  dns.ClassINET,
-						Ttl:    node.NS.TTL,
-					},
-					Ns: node.NS.Value,
-				})
-			}
+			for _, x := range node.Records {
+				switch r := x.(type) {
+				case naming.RecordNS:
+					if replyType(&q, dns.TypeNS) {
+						replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
+							Hdr: dns.RR_Header{
+								Name:   name,
+								Rrtype: dns.TypeNS,
+								Class:  dns.ClassINET,
+								Ttl:    r.TTL,
+							},
+							Ns: r.Value,
+						})
+					}
 
-			if len(node.Addr.A) != 0 && replyType(&q, dns.TypeA) {
-				replyMsg.Answer = append(replyMsg.Answer, &dns.A{
-					Hdr: dns.RR_Header{
-						Name:   name,
-						Rrtype: dns.TypeA,
-						Class:  dns.ClassINET,
-						Ttl:    node.Addr.TTL,
-					},
-					A: node.Addr.A,
-				})
-			}
+				case naming.RecordA:
+					if replyType(&q, dns.TypeA) {
+						replyMsg.Answer = append(replyMsg.Answer, &dns.A{
+							Hdr: dns.RR_Header{
+								Name:   name,
+								Rrtype: dns.TypeA,
+								Class:  dns.ClassINET,
+								Ttl:    r.TTL,
+							},
+							A: r.Value,
+						})
+					}
 
-			if len(node.Addr.AAAA) != 0 && replyType(&q, dns.TypeAAAA) {
-				replyMsg.Answer = append(replyMsg.Answer, &dns.AAAA{
-					Hdr: dns.RR_Header{
-						Name:   name,
-						Rrtype: dns.TypeAAAA,
-						Class:  dns.ClassINET,
-						Ttl:    node.Addr.TTL,
-					},
-					AAAA: node.Addr.AAAA,
-				})
-			}
+				case naming.RecordAAAA:
+					if replyType(&q, dns.TypeAAAA) {
+						replyMsg.Answer = append(replyMsg.Answer, &dns.AAAA{
+							Hdr: dns.RR_Header{
+								Name:   name,
+								Rrtype: dns.TypeAAAA,
+								Class:  dns.ClassINET,
+								Ttl:    r.TTL,
+							},
+							AAAA: r.Value,
+						})
+					}
 
-			if len(node.TXT.Values) != 0 && replyType(&q, dns.TypeTXT) {
-				replyMsg.Answer = append(replyMsg.Answer, &dns.TXT{
-					Hdr: dns.RR_Header{
-						Name:   name,
-						Rrtype: dns.TypeTXT,
-						Class:  dns.ClassINET,
-						Ttl:    node.TXT.TTL,
-					},
-					Txt: node.TXT.Values,
-				})
+				case naming.RecordTXT:
+					if replyType(&q, dns.TypeTXT) {
+						replyMsg.Answer = append(replyMsg.Answer, &dns.TXT{
+							Hdr: dns.RR_Header{
+								Name:   name,
+								Rrtype: dns.TypeTXT,
+								Class:  dns.ClassINET,
+								Ttl:    r.TTL,
+							},
+							Txt: r.Values,
+						})
+					}
+
+				default:
+					if debugLog != nil {
+						debugLog.Printf("dnsserver: node %q has unknown record type: %v", name, x)
+					}
+				}
 			}
 		}
 

@@ -27,12 +27,15 @@ func TestServer(t *testing.T) {
 
 	orgZone := &dnszone.Zone{
 		Domain: "example.org.",
-		Nodes: map[string]*dns.Records{
-			dns.Apex: &dns.Records{
-				Addr: dns.AddrRecord{
-					A:    net.ParseIP("93.184.216.34"),
-					AAAA: net.ParseIP("2606:2800:220:1:248:1893:25c8:1946"),
-					TTL:  1,
+		Nodes: map[string]dns.Records{
+			dns.Apex: dns.Records{
+				dns.RecordA{
+					Value: net.ParseIP("93.184.216.34"),
+					TTL:   1,
+				},
+				dns.RecordAAAA{
+					Value: net.ParseIP("2606:2800:220:1:248:1893:25c8:1946"),
+					TTL:   1,
 				},
 			},
 		},

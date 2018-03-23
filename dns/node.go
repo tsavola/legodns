@@ -12,6 +12,6 @@ const (
 
 // Node carries information about a host within a zone.
 type Node struct {
-	Name string // Empty name indicates nonexistent/unknown node
-	Records
+	Name    string // Empty name indicates nonexistent/unknown node
+	Records Records
 }

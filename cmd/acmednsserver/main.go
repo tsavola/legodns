@@ -112,21 +112,23 @@ func Main() (err error) {
 		log.Fatalf("TTL value is out of bounds: %v", dtl)
 	}
 
-	rs := &dns.Records{
-		Addr: dns.AddrRecord{
-			TTL: ttl,
-		},
-	}
+	var rs dns.Records
 	if a != "" {
-		rs.Addr.A = net.ParseIP(a)
+		rs = append(rs, dns.RecordA{
+			Value: net.ParseIP(a),
+			TTL:   ttl,
+		})
 	}
 	if aaaa != "" {
-		rs.Addr.AAAA = net.ParseIP(aaaa)
+		rs = append(rs, dns.RecordAAAA{
+			Value: net.ParseIP(aaaa),
+			TTL:   ttl,
+		})
 	}
 
 	zone := &dnszone.Zone{
 		Domain: dnsserver.DotSuffix(domain),
-		Nodes:  make(map[string]*dns.Records),
+		Nodes:  make(map[string]dns.Records),
 	}
 	if apex {
 		zone.Nodes[dns.Apex] = rs

@@ -168,7 +168,7 @@ func (c *Container) applyChanges() {
 // resolving resources or transferring zones.
 type Zone struct {
 	Domain string
-	Nodes  map[string]*dns.Records
+	Nodes  map[string]dns.Records
 
 	serial uint32 // managed by Container
 }
@@ -190,7 +190,7 @@ func (z *Zone) matchResource(name string) (node string, ok bool) {
 	return
 }
 
-func (z *Zone) resolveNode(node string) (rs *dns.Records) {
+func (z *Zone) resolveNode(node string) (rs dns.Records) {
 	rs = z.Nodes[node]
 	if rs == nil && node != dns.Apex { // wildcard doesn't apply to apex
 		rs = z.Nodes[dns.Wildcard]
@@ -230,30 +230,38 @@ func (z *Zone) transfer() (results []dns.Node) {
 func (z *Zone) modifyTXTRecord(node string, values []string, ttl uint32) {
 	if len(values) > 0 {
 		if z.Nodes == nil {
-			z.Nodes = make(map[string]*dns.Records)
+			z.Nodes = make(map[string]dns.Records)
 		}
 
-		rs := z.Nodes[node]
-		if rs == nil {
-			rs = new(dns.Records)
-			z.Nodes[node] = rs
-		}
-
-		rs.TXT = dns.TextRecord{
-			Values: append([]string(nil), values...), // copy
+		r := dns.RecordTXT{
+			Values: deepCopyStrings(values),
 			TTL:    ttl,
 		}
+
+		rs := z.Nodes[node]
+		for i, x := range rs {
+			if _, found := x.(dns.RecordTXT); found {
+				rs[i] = r
+				return
+			}
+		}
+		z.Nodes[node] = append(rs, r)
 	} else {
 		rs := z.Nodes[node]
-		if rs != nil {
-			rs.TXT = dns.TextRecord{
-				Values: nil,
-				TTL:    0,
-			}
-
-			if rs.Empty() {
-				delete(z.Nodes, node)
+		for i, x := range rs {
+			if _, found := x.(dns.RecordTXT); found {
+				rs = append(rs[:i], rs[i+1:]...)
+				if len(rs) > 0 {
+					z.Nodes[node] = rs
+				} else {
+					delete(z.Nodes, node)
+				}
+				return
 			}
 		}
 	}
+}
+
+func deepCopyStrings(values []string) []string {
+	return append([]string(nil), values...)
 }

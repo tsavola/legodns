@@ -5,50 +5,71 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 )
 
-type Records struct {
-	Addr AddrRecord
-	TXT  TextRecord
-	NS   StringRecord
+type RecordA IPRecord
+type RecordNS StringRecord
+type RecordTXT StringsRecord
+type RecordAAAA IPRecord
+
+func (r *RecordA) DeepCopy() RecordA {
+	return RecordA((*IPRecord)(r).DeepCopy())
 }
 
-func (rs *Records) Empty() bool {
-	return len(rs.Addr.A) == 0 && len(rs.Addr.AAAA) == 0 && len(rs.TXT.Values) == 0 && rs.NS.Value == ""
+func (r *RecordNS) DeepCopy() RecordNS {
+	return RecordNS((*StringRecord)(r).DeepCopy())
 }
 
-func (rs *Records) DeepCopy() Records {
-	return Records{
-		Addr: rs.Addr.DeepCopy(),
-		TXT:  rs.TXT.DeepCopy(),
-		NS:   rs.NS.DeepCopy(),
+func (r *RecordTXT) DeepCopy() RecordTXT {
+	return RecordTXT((*StringsRecord)(r).DeepCopy())
+}
+
+func (r *RecordAAAA) DeepCopy() RecordAAAA {
+	return RecordAAAA((*IPRecord)(r).DeepCopy())
+}
+
+func DeepCopyRecord(x interface{}) interface{} {
+	switch r := x.(type) {
+	case RecordA:
+		return r.DeepCopy()
+
+	case RecordNS:
+		return r.DeepCopy()
+
+	case RecordTXT:
+		return r.DeepCopy()
+
+	case RecordAAAA:
+		return r.DeepCopy()
+
+	default:
+		panic(fmt.Errorf("dns: not a record: %v", x))
 	}
 }
 
-type AddrRecord struct {
-	A    net.IP
-	AAAA net.IP
-	TTL  uint32
-}
+// Records contains Record*-type items (values, not pointers).  There must not
+// be more than one item of a given type.
+type Records []interface{}
 
-func (r *AddrRecord) DeepCopy() AddrRecord {
-	return AddrRecord{
-		A:    append(net.IP(nil), r.A...),
-		AAAA: append(net.IP(nil), r.AAAA...),
-		TTL:  r.TTL,
+func (source Records) DeepCopy() Records {
+	target := make(Records, 0, len(source))
+	for _, x := range source {
+		target = append(target, DeepCopyRecord(x))
 	}
+	return target
 }
 
-type TextRecord struct {
-	Values []string
-	TTL    uint32
+type IPRecord struct {
+	Value net.IP
+	TTL   uint32
 }
 
-func (r *TextRecord) DeepCopy() TextRecord {
-	return TextRecord{
-		Values: append([]string(nil), r.Values...),
-		TTL:    r.TTL,
+func (r *IPRecord) DeepCopy() IPRecord {
+	return IPRecord{
+		Value: append(net.IP(nil), r.Value...),
+		TTL:   r.TTL,
 	}
 }
 
@@ -59,4 +80,16 @@ type StringRecord struct {
 
 func (r *StringRecord) DeepCopy() StringRecord {
 	return *r
+}
+
+type StringsRecord struct {
+	Values []string
+	TTL    uint32
+}
+
+func (r *StringsRecord) DeepCopy() StringsRecord {
+	return StringsRecord{
+		Values: append([]string(nil), r.Values...),
+		TTL:    r.TTL,
+	}
 }
