@@ -50,7 +50,7 @@ func (c *Container) ResolveRecords(name string, filter dns.RecordType) (node str
 		node = z.matchResource(name)
 		if node != "" {
 			if rs := z.resolveNode(node); rs != nil {
-				results = rs.DeepCopyRecords(filter)
+				results = rs.DeepCopyType(filter)
 			}
 			serial = z.serial
 			return
@@ -253,7 +253,7 @@ func (z *Zone) transfer() (results []dns.NodeRecords) {
 }
 
 func (z *Zone) modifyRecord(node string, rt dns.RecordType, r dns.Record) {
-	if r != nil && !r.Empty() {
+	if r != nil && !r.IsZero() {
 		if z.Nodes == nil {
 			z.Nodes = make(map[string]dns.Records)
 		}

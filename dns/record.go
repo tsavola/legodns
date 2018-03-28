@@ -22,7 +22,7 @@ const (
 
 type Record interface {
 	DeepCopy() Record
-	Empty() bool
+	IsZero() bool
 	Type() RecordType
 }
 
@@ -36,10 +36,10 @@ func (r RecordNS) DeepCopy() Record   { return RecordNS((*StringRecord)(&r).Deep
 func (r RecordTXT) DeepCopy() Record  { return RecordTXT((*StringsRecord)(&r).DeepCopy()) }
 func (r RecordAAAA) DeepCopy() Record { return RecordAAAA((*IPRecord)(&r).DeepCopy()) }
 
-func (r RecordA) Empty() bool    { return len(r.Value) == 0 }
-func (r RecordNS) Empty() bool   { return r.Value == "" }
-func (r RecordTXT) Empty() bool  { return len(r.Values) == 0 }
-func (r RecordAAAA) Empty() bool { return len(r.Value) == 0 }
+func (r RecordA) IsZero() bool    { return len(r.Value) == 0 }
+func (r RecordNS) IsZero() bool   { return r.Value == "" }
+func (r RecordTXT) IsZero() bool  { return len(r.Values) == 0 }
+func (r RecordAAAA) IsZero() bool { return len(r.Value) == 0 }
 
 func (RecordA) Type() RecordType    { return TypeA }
 func (RecordNS) Type() RecordType   { return TypeNS }
@@ -51,10 +51,10 @@ func (RecordAAAA) Type() RecordType { return TypeAAAA }
 type Records []Record
 
 func (rs Records) DeepCopy() Records {
-	return rs.DeepCopyRecords(TypeAny)
+	return rs.DeepCopyType(TypeAny)
 }
 
-func (source Records) DeepCopyRecords(filter RecordType) Records {
+func (source Records) DeepCopyType(filter RecordType) Records {
 	target := make(Records, 0, len(source))
 	for _, r := range source {
 		switch filter {
