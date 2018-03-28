@@ -9,7 +9,6 @@ package dnszone
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -105,6 +104,11 @@ func (c *Container) ModifyTXTRecord(ctx context.Context, zone, node string, valu
 	return c.ModifyRecord(ctx, zone, node, dns.RecordTXT{Values: values, TTL: ttl})
 }
 
+// ForgetTXTRecord implements the focused acmedns.DNS interface.
+func (c *Container) ForgetTXTRecord(zone, node string) error {
+	return c.ForgetRecord(zone, node, dns.TypeTXT)
+}
+
 func (c *Container) ModifyRecord(ctx context.Context, zoneName, node string, r dns.Record) error {
 	c.mutex.Lock()
 
@@ -119,7 +123,7 @@ func (c *Container) ModifyRecord(ctx context.Context, zoneName, node string, r d
 
 	if targetZone != nil {
 		// Modify zone immediately without changing serial number.
-		targetZone.modifyRecord(node, r)
+		targetZone.modifyRecord(node, r.Type(), r)
 
 		// Coalesce all serial number changes over a one-second period, and
 		// increment each zone's serial number just once at the end of that
@@ -141,6 +145,23 @@ func (c *Container) ModifyRecord(ctx context.Context, zoneName, node string, r d
 
 		return newZoneError(zoneName)
 	}
+}
+
+// ForgetRecord is non-blocking ModifyRecord with zero-value record.
+func (c *Container) ForgetRecord(zoneName, node string, rt dns.RecordType) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, z := range c.zones {
+		if z.Domain == zoneName {
+			// See the comments in ModifyRecord.
+			z.modifyRecord(node, rt, nil)
+			c.scheduleChange(z)
+			return nil
+		}
+	}
+
+	return newZoneError(zoneName)
 }
 
 // scheduleChange must be called with write lock held.
@@ -231,17 +252,15 @@ func (z *Zone) transfer() (results []dns.NodeRecords) {
 	return
 }
 
-func (z *Zone) modifyRecord(node string, r dns.Record) {
-	t := reflect.TypeOf(r)
-
-	if !r.Empty() {
+func (z *Zone) modifyRecord(node string, rt dns.RecordType, r dns.Record) {
+	if r != nil && !r.Empty() {
 		if z.Nodes == nil {
 			z.Nodes = make(map[string]dns.Records)
 		}
 
 		rs := z.Nodes[node]
 		for i, x := range rs {
-			if reflect.TypeOf(x) == t {
+			if x.Type() == rt {
 				rs[i] = r
 				return
 			}
@@ -250,7 +269,7 @@ func (z *Zone) modifyRecord(node string, r dns.Record) {
 	} else {
 		rs := z.Nodes[node]
 		for i, x := range rs {
-			if reflect.TypeOf(x) == t {
+			if x.Type() == rt {
 				rs = append(rs[:i], rs[i+1:]...)
 				if len(rs) > 0 {
 					z.Nodes[node] = rs

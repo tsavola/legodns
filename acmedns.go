@@ -21,10 +21,16 @@ const (
 	challengeTTL  = 1 // second
 )
 
-// DNS can create/update TXT records on name servers.  It doesn't have to be
-// instantaneous.
+// DNS can create, update, and remove TXT records on name servers.  It doesn't
+// have to be instantaneous.
 type DNS interface {
+	// ModifyTXTRecord creates, updates, or removes a TXT record.  It blocks
+	// until the modification is complete or the context is done.
 	ModifyTXTRecord(ctx context.Context, zone, node string, values []string, ttl uint32) error
+
+	// ForgetTXTRecord removes a TXT record at some point in the future.  It
+	// doesn't wait for the modification to be complete.
+	ForgetTXTRecord(zone, node string) error
 }
 
 func Verify(ctx context.Context, client *acme.Client, dns DNS, serverName, zone string) (err error) {
@@ -67,7 +73,7 @@ func acquireAuthorization(ctx context.Context, client *acme.Client, authz *acme.
 				chal := authz.Challenges[i]
 				err = fulfillChallenge(ctx, client, chal, dns, zone)
 				if err == nil {
-					defer undoChallenge(ctx, dns, zone) // After WaitAuthorization
+					defer dns.ForgetTXTRecord(zone, challengeNode) // After WaitAuthorization
 					accepted, err = client.Accept(ctx, chal)
 					if err == nil {
 						break
@@ -98,8 +104,4 @@ func fulfillChallenge(ctx context.Context, client *acme.Client, chal *acme.Chall
 	}
 
 	return dns.ModifyTXTRecord(ctx, zone, challengeNode, []string{value}, challengeTTL)
-}
-
-func undoChallenge(ctx context.Context, dns DNS, zone string) error {
-	return dns.ModifyTXTRecord(ctx, zone, challengeNode, nil, 0)
 }
