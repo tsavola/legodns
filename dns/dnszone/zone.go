@@ -42,6 +42,7 @@ func InitWithSerial(serial uint32, zones ...*Zone) *Container {
 	}
 }
 
+// ResolveRecords answers ANY queries by returning A and AAAA records.
 func (c *Container) ResolveRecords(name string, filter dns.RecordType) (node string, results dns.Records, serial uint32) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -50,7 +51,13 @@ func (c *Container) ResolveRecords(name string, filter dns.RecordType) (node str
 		node = z.matchResource(name)
 		if node != "" {
 			if rs := z.resolveNode(node); rs != nil {
-				results = rs.DeepCopyType(filter)
+				switch filter {
+				case dns.TypeANY:
+					results = resolveANYRecords(rs)
+
+				default:
+					results = resolveRecordType(rs, filter)
+				}
 			}
 			serial = z.serial
 			return
@@ -58,6 +65,26 @@ func (c *Container) ResolveRecords(name string, filter dns.RecordType) (node str
 	}
 
 	return
+}
+
+func resolveRecordType(rs dns.Records, t dns.RecordType) dns.Records {
+	for _, r := range rs {
+		if r.Type() == t {
+			return dns.Records{r.DeepCopy()}
+		}
+	}
+	return nil
+}
+
+func resolveANYRecords(rs dns.Records) dns.Records {
+	results := make(dns.Records, 0, 2)
+	for _, r := range rs {
+		switch r.Type() {
+		case dns.TypeA, dns.TypeAAAA:
+			results = append(results, r.DeepCopy())
+		}
+	}
+	return results
 }
 
 func (c *Container) ResolveZone(ctx context.Context, hostname string) (domain string, err error) {

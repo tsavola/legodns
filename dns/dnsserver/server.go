@@ -166,6 +166,17 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 		if soa.authority() {
 			nodes, serial = resolver.TransferZone(strings.ToLower(q.Name))
 			hasApex = true
+
+			replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa, serial))
+			replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
+				Hdr: dns.RR_Header{
+					Name:   q.Name,
+					Rrtype: dns.TypeNS,
+					Class:  dns.ClassINET,
+					Ttl:    soa.TTL,
+				},
+				Ns: soa.NS,
+			})
 		}
 	} else {
 		var (
@@ -181,24 +192,6 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 	}
 
 	if nodes != nil {
-		if hasApex && soa.authority() {
-			if replyType(&q, dns.TypeSOA) {
-				replyMsg.Answer = append(replyMsg.Answer, soaAnswer(&q, soa, serial))
-			}
-
-			if replyType(&q, dns.TypeNS) {
-				replyMsg.Answer = append(replyMsg.Answer, &dns.NS{
-					Hdr: dns.RR_Header{
-						Name:   q.Name,
-						Rrtype: dns.TypeNS,
-						Class:  dns.ClassINET,
-						Ttl:    soa.TTL,
-					},
-					Ns: soa.NS,
-				})
-			}
-		}
-
 		for _, node := range nodes {
 			var name string
 
@@ -280,6 +273,18 @@ func handle(w dns.ResponseWriter, questMsg *dns.Msg, resolver Resolver, soa *SOA
 						debugLog.Printf("dnsserver: node %q has unknown record type: %v", name, t)
 					}
 				}
+			}
+
+			if q.Qtype == dns.TypeANY && len(replyMsg.Answer) == 0 {
+				// Synthesize an HINFO record as resolution didn't yield ANY.
+				replyMsg.Answer = append(replyMsg.Answer, &dns.HINFO{
+					Hdr: dns.RR_Header{
+						Name:   name,
+						Rrtype: dns.TypeHINFO,
+						Class:  dns.ClassINET,
+						Ttl:    soa.TTL,
+					},
+				})
 			}
 		}
 

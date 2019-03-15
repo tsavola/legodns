@@ -17,7 +17,7 @@ const (
 	TypeTXT             = 16
 	TypeAAAA            = 28
 
-	TypeAny = 255 // only for matching against actual resource types
+	TypeANY = 255 // Only for matching against actual resource types.
 )
 
 type Record interface {
@@ -51,18 +51,11 @@ func (RecordAAAA) Type() RecordType { return TypeAAAA }
 type Records []Record
 
 func (rs Records) DeepCopy() Records {
-	return rs.DeepCopyType(TypeAny)
-}
-
-func (source Records) DeepCopyType(filter RecordType) Records {
-	target := make(Records, 0, len(source))
-	for _, r := range source {
-		switch filter {
-		case TypeAny, r.Type():
-			target = append(target, r.DeepCopy())
-		}
+	clone := make(Records, len(rs))
+	for i, r := range rs {
+		clone[i] = r.DeepCopy()
 	}
-	return target
+	return clone
 }
 
 type IPRecord struct {
