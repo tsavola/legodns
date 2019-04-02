@@ -1,7 +1,6 @@
-Acmedns implements automatic ACME-based TLS certificate renewal via a
-standalone DNS server.  Documentation can be found at
-https://godoc.org/github.com/tsavola/acmedns.
+Fairly generic https://github.com/go-acme/lego DNS challenge provider adapter.
 
-This codebase includes a modified copy of https://golang.org/x/crypto/acme/autocert.
-Its copyright is held by The Go Authors.  All code is released using similar
-license terms.
+lego's DNS provider API requires the implementation to have a dependency on
+lego's dns01 package.  That makes it less than ideal for a DNS service to
+directly provide a lego-compatible DNS challenge solver.  This package solves
+that challenge.
